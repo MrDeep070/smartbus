@@ -1,14 +1,6 @@
-
 <?php
-
 require_once('../includes/db.php');
-
 require_once('../includes/auth.php');
-
-if (!isset($_SESSION['admin_logged_in'])) {
-    header("Location: login.php");
-    exit();
-}
 
 
 
@@ -16,7 +8,18 @@ if (!isset($_SESSION['admin_logged_in'])) {
 $users = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $buses = $pdo->query("SELECT COUNT(*) FROM buses")->fetchColumn();
 $bookings = $pdo->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
-$revenue = $pdo->query("SELECT SUM(amount_paid) FROM bookings")->fetchColumn();
+
+// Updated revenue calculation to include cancellation fees
+$revenue = $pdo->query("
+    SELECT COALESCE(SUM(
+        CASE 
+            WHEN status = 'confirmed' THEN amount_paid 
+            WHEN status = 'cancelled' THEN cancellation_fee 
+            ELSE 0 
+        END
+    ), 0) 
+    FROM bookings
+")->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -89,11 +92,14 @@ $revenue = $pdo->query("SELECT SUM(amount_paid) FROM bookings")->fetchColumn();
                 </div>
             </div>
             
-            <div class="bg-white rounded-xl shadow-md p-6">
+             <div class="bg-white rounded-xl shadow-md p-6">
                 <div class="flex justify-between items-center">
                     <div>
                         <p class="text-gray-600">Total Revenue</p>
                         <p class="text-3xl font-bold mt-2">₹<?= number_format($revenue, 2) ?></p>
+                        <p class="text-sm text-gray-500 mt-1">
+                            (Includes cancellation fees)
+                        </p>
                     </div>
                     <div class="bg-purple-100 p-3 rounded-full">
                         <i class="fas fa-rupee-sign text-purple-600 text-2xl"></i>

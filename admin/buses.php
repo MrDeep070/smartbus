@@ -100,15 +100,19 @@ $buses = $stmt->fetchAll();
                         </td>
                         <td class="py-3 px-4"><?= date('d M Y', strtotime($bus['date'])) ?></td>
                         <td class="py-3 px-4">₹<?= number_format($bus['fare'], 2) ?></td>
-                        <td class="py-3 px-4">
-                            <div class="flex items-center">
-                                <div class="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                                    <div class="bg-green-600 h-2.5 rounded-full" 
-                                         style="width: <?= ($bus['available_seats'] / $bus['seats_total']) * 100 ?>%"></div>
-                                </div>
-                                <span><?= $bus['available_seats'] ?>/<?= $bus['seats_total'] ?></span>
-                            </div>
-                        </td>
+                       <td class="py-3 px-4">
+    <div class="flex items-center">
+        <div class="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+            <?php 
+            $percentage = ($bus['available_seats'] / $bus['seats_total']) * 100;
+            $color = $percentage > 50 ? 'bg-green-600' : ($percentage > 20 ? 'bg-yellow-500' : 'bg-red-600');
+            ?>
+            <div class="h-2.5 rounded-full <?= $color ?>" 
+                 style="width: <?= $percentage ?>%"></div>
+        </div>
+        <span><?= $bus['available_seats'] ?>/<?= $bus['seats_total'] ?></span>
+    </div>
+</td>
                         <td class="py-3 px-4">
                             <a href="edit_bus.php?id=<?= $bus['id'] ?>" class="text-blue-600 hover:text-blue-800 mr-2">
                                 <i class="fas fa-edit"></i>

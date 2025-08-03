@@ -1,4 +1,3 @@
-
 <?php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -18,7 +17,7 @@ if (empty($_GET['id'])) {
 $booking_id = $_GET['id'];
 
 // Fetch booking details
-$stmt = $pdo->prepare("SELECT bk.*, u.name AS user_name, u.email, b.bus_no, b.source, b.destination, 
+$stmt = $pdo->prepare("SELECT bk.*, u.name AS user_name, u.email, b.bus_no, b.bus_type, b.source, b.destination, 
                               b.departure_time, b.arrival_time, b.fare
                        FROM bookings bk
                        JOIN users u ON bk.user_id = u.id
@@ -55,7 +54,7 @@ $seats = json_decode($booking['seats'], true);
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h3 class="text-xl font-bold">Journey Details</h3>
-                        <p class="text-gray-600">Thank you for booking with GSRTC</p>
+                        <p class="text-gray-600">Thank you for booking with SmartBus</p>
                     </div>
                     <div class="text-right">
                         <p class="text-lg font-bold">₹<?= number_format($booking['amount_paid'], 2) ?></p>
@@ -71,7 +70,7 @@ $seats = json_decode($booking['seats'], true);
                             </div>
                             <div>
                                 <h4 class="font-bold"><?= htmlspecialchars($booking['bus_no']) ?></h4>
-                                <p class="text-gray-600"><?= htmlspecialchars($bus['bus_type'] ?? 'N/A') ?></p>
+                                <p class="text-gray-600"><?= htmlspecialchars($booking['bus_type']) ?></p>
                             </div>
                         </div>
                         
@@ -124,12 +123,18 @@ $seats = json_decode($booking['seats'], true);
                                 </div>
                                 
                                 <div>
-                                    <p class="text-gray-600">Status</p>
-                                    <p class="font-medium text-green-600">Confirmed</p>
-                                </div>
+    <p class="text-gray-600">Status</p>
+    <p class="font-medium 
+        <?= $booking['status'] === 'confirmed' ? 'text-green-600' : '' ?>
+        <?= $booking['status'] === 'cancelled' ? 'text-red-600' : '' ?>
+        <?= $booking['status'] === 'pending' ? 'text-yellow-600' : '' ?>">
+        <?= ucfirst($booking['status']) ?>
+    </p>
+</div>
+
                                 
                                 <div class="mt-6">
-                                    <a href="#" 
+                                    <a href="generate_ticket.php?id=<?= $booking['id'] ?>" 
                                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg font-semibold">
                                         <i class="fas fa-download mr-2"></i> Download Ticket (PDF)
                                     </a>
@@ -144,10 +149,10 @@ $seats = json_decode($booking['seats'], true);
                         <div>
                             <h4 class="font-bold mb-2">Need help?</h4>
                             <p class="text-gray-600">
-                                <i class="fas fa-phone-alt mr-2"></i> +91 79 2656 0000
+                                <i class="fas fa-phone-alt mr-2"></i> +91 1234567890
                             </p>
                             <p class="text-gray-600">
-                                <i class="fas fa-envelope mr-2"></i> support@gsrtc.in
+                                <i class="fas fa-envelope mr-2"></i> support@smartbus.in
                             </p>
                         </div>
                         <div class="text-right">

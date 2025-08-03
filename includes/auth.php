@@ -13,4 +13,6 @@ function isAdmin() {
 function getUserData() {
     return $_SESSION['user'] ?? null;
 }
+
+// $_SESSION['loyalty_points'] = $user['loyalty_points'];
 ?>

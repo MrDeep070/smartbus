@@ -1,4 +1,3 @@
-
 <?php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -34,6 +33,12 @@ $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch();
 
+// Fetch wallet balance
+$stmt = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$wallet = $stmt->fetch();
+$wallet_balance = $wallet ? $wallet['balance'] : 0.00;
+
 // Check seat availability
 $available_seats = $bus['available_seats'];
 $num_seats = count($seat_numbers);
@@ -50,58 +55,84 @@ $subtotal = $base_fare * $num_seats;
 $gst_amount = ($subtotal * $gst_percent) / 100;
 $total_amount = $subtotal + $gst_amount;
 
-// Handle loyalty points redemption
+// Handle form submission
+$error = '';
+$success = '';
 $points_used = 0;
 $discount = 0;
 $final_amount = $total_amount;
+$payment_method = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Process payment
     $points_used = isset($_POST['use_points']) ? min((int)$_POST['points_to_use'], $user['loyalty_points']) : 0;
     $discount = min($points_used, $total_amount);
     $final_amount = $total_amount - $discount;
+    $payment_method = $_POST['payment_method'] ?? '';
     
-    // Create booking record
-    $seats_json = json_encode($seat_numbers);
-    
-    try {
-        $pdo->beginTransaction();
+    // Validate payment method
+    if (!$payment_method) {
+        $error = 'Please select a payment method';
+    } elseif ($payment_method === 'wallet' && $wallet_balance < $final_amount) {
+        $error = 'Insufficient wallet balance. Please choose another payment method.';
+    } else {
+        // Create booking record
+        $seats_json = json_encode($seat_numbers);
         
-        // Create booking
-        $stmt = $pdo->prepare("INSERT INTO bookings 
-                              (user_id, bus_id, seats, amount_paid, gst_amount, discount, status) 
-                              VALUES (?, ?, ?, ?, ?, ?, 'confirmed')");
-        $stmt->execute([
-            $user_id, 
-            $bus_id, 
-            $seats_json, 
-            $final_amount,
-            $gst_amount,
-            $discount
-        ]);
-        $booking_id = $pdo->lastInsertId();
-        
-        // Update bus available seats
-        $new_available = $bus['available_seats'] - $num_seats;
-        $stmt = $pdo->prepare("UPDATE buses SET available_seats = ? WHERE id = ?");
-        $stmt->execute([$new_available, $bus_id]);
-        
-        // Update user loyalty points
-        $earned_points = floor($final_amount / 100); // 1 point per ₹100 spent
-        $new_points = $user['loyalty_points'] - $points_used + $earned_points;
-        
-        $stmt = $pdo->prepare("UPDATE users SET loyalty_points = ? WHERE id = ?");
-        $stmt->execute([$new_points, $user_id]);
-        
-        $pdo->commit();
-        
-        // Redirect to confirmation page
-        header('Location: confirm.php?id=' . $booking_id);
-        exit;
-        
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        $error = "Payment processing failed: " . $e->getMessage();
+        try {
+            $pdo->beginTransaction();
+            
+            // Create booking
+            $stmt = $pdo->prepare("INSERT INTO bookings 
+                                  (user_id, bus_id, seats, amount_paid, gst_amount, discount, status) 
+                                  VALUES (?, ?, ?, ?, ?, ?, 'confirmed')");
+            $stmt->execute([
+                $user_id, 
+                $bus_id, 
+                $seats_json, 
+                $final_amount,
+                $gst_amount,
+                $discount
+            ]);
+            $booking_id = $pdo->lastInsertId();
+            
+            // Update bus available seats
+            $new_available = $bus['available_seats'] - $num_seats;
+            $stmt = $pdo->prepare("UPDATE buses SET available_seats = ? WHERE id = ?");
+            $stmt->execute([$new_available, $bus_id]);
+            
+            // Update user loyalty points
+            $earned_points = floor($final_amount / 10); // 1 point per ₹10 spent
+            $new_points = $user['loyalty_points'] - $points_used + $earned_points;
+            
+            $stmt = $pdo->prepare("UPDATE users SET loyalty_points = ? WHERE id = ?");
+            $stmt->execute([$new_points, $user_id]);
+            
+            // Handle wallet payment
+            if ($payment_method === 'wallet') {
+                // Deduct from wallet
+                $new_wallet_balance = $wallet_balance - $final_amount;
+                $stmt = $pdo->prepare("UPDATE wallets SET balance = ? WHERE user_id = ?");
+                $stmt->execute([$new_wallet_balance, $user_id]);
+                
+                // Record wallet transaction
+                $stmt = $pdo->prepare("INSERT INTO wallet_transactions 
+                                      (user_id, type, amount, description) 
+                                      VALUES (?, 'debit', ?, ?)");
+                $desc = "Payment for booking BK" . str_pad($booking_id, 5, '0', STR_PAD_LEFT);
+                $stmt->execute([$user_id, $final_amount, $desc]);
+            }
+            
+            $pdo->commit();
+            
+            // Redirect to confirmation page
+            header('Location: confirm.php?id=' . $booking_id);
+            exit;
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error = "Payment processing failed: " . $e->getMessage();
+        }
     }
 }
 
@@ -115,7 +146,7 @@ $points_value = $max_points; // 1 point = ₹1
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl font-bold mb-6">Complete Your Payment</h2>
             
-            <?php if (isset($error)): ?>
+            <?php if ($error): ?>
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
                     <?= $error ?>
                 </div>
@@ -229,6 +260,47 @@ $points_value = $max_points; // 1 point = ₹1
                                 </div>
                             </div>
                             
+                            <!-- Payment method selection -->
+                            <div class="mt-6">
+                                <h3 class="text-lg font-bold mb-3">Select Payment Method</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="flex items-center cursor-pointer border rounded-lg p-4 hover:border-blue-500">
+                                            <input type="radio" name="payment_method" value="wallet" 
+                                                   class="mr-3 h-5 w-5 text-blue-600" 
+                                                   onchange="updatePaymentMethod('wallet')">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-wallet text-2xl text-green-600 mr-3"></i>
+                                                <div>
+                                                    <h4 class="font-bold">Wallet</h4>
+                                                    <p class="text-sm text-gray-600">
+                                                        Balance: ₹<?= number_format($wallet_balance, 2) ?>
+                                                        <?php if ($wallet_balance < $total_amount): ?>
+                                                            <span class="text-red-600">(Insufficient balance)</span>
+                                                        <?php endif; ?>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="flex items-center cursor-pointer border rounded-lg p-4 hover:border-blue-500">
+                                            <input type="radio" name="payment_method" value="razorpay" 
+                                                   class="mr-3 h-5 w-5 text-blue-600" 
+                                                   onchange="updatePaymentMethod('razorpay')">
+                                            <div class="flex items-center">
+                                                <img src="https://razorpay.com/assets/razorpay-glyph.svg" alt="Razorpay" class="h-8 mr-3">
+                                                <div>
+                                                    <h4 class="font-bold">Razorpay</h4>
+                                                    <p class="text-sm text-gray-600">Cards, UPI, Netbanking</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mt-6">
                                 <button type="submit" 
                                         class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold text-lg">
@@ -242,60 +314,35 @@ $points_value = $max_points; // 1 point = ₹1
                 <!-- Payment Options -->
                 <div class="lg:w-1/2">
                     <div class="bg-white rounded-xl shadow-md p-6 sticky top-4">
-                        <h3 class="text-xl font-bold mb-6">Payment Options</h3>
+                        <h3 class="text-xl font-bold mb-6">Payment Summary</h3>
                         
-                        <div class="space-y-4">
-                            <!-- Razorpay Payment Button (Test Mode) -->
-                            <div class="border rounded-lg p-4 hover:border-blue-500 cursor-pointer">
-                                <div class="flex items-center">
-                                    <div class="mr-4">
-                                        <img src="https://razorpay.com/assets/razorpay-glyph.svg" alt="Razorpay" class="h-10">
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold">Credit/Debit Card</h4>
-                                        <p class="text-sm text-gray-600">Visa, Mastercard, Amex, Rupay</p>
-                                    </div>
-                                </div>
+                        <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                            <div class="flex justify-between mb-4">
+                                <span>Total Amount:</span>
+                                <span class="font-bold">₹<?= number_format($total_amount, 2) ?></span>
                             </div>
                             
-                            <!-- UPI -->
-                            <div class="border rounded-lg p-4 hover:border-blue-500 cursor-pointer">
-                                <div class="flex items-center">
-                                    <div class="mr-4">
-                                        <i class="fas fa-mobile-alt text-3xl text-purple-600"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold">UPI</h4>
-                                        <p class="text-sm text-gray-600">Google Pay, PhonePe, Paytm, BHIM</p>
-                                    </div>
-                                </div>
+                            <div class="flex justify-between mb-4">
+                                <span>Loyalty Points Discount:</span>
+                                <span class="font-bold text-green-600" id="summary_discount">₹0.00</span>
                             </div>
                             
-                            <!-- Net Banking -->
-                            <div class="border rounded-lg p-4 hover:border-blue-500 cursor-pointer">
-                                <div class="flex items-center">
-                                    <div class="mr-4">
-                                        <i class="fas fa-landmark text-3xl text-blue-600"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold">Net Banking</h4>
-                                        <p class="text-sm text-gray-600">All major Indian banks</p>
-                                    </div>
-                                </div>
+                            <div class="flex justify-between border-t pt-4 mb-4">
+                                <span>Final Amount:</span>
+                                <span class="font-bold text-lg" id="summary_final">₹<?= number_format($total_amount, 2) ?></span>
                             </div>
                             
-                            <!-- Wallet -->
-                            <div class="border rounded-lg p-4 hover:border-blue-500 cursor-pointer">
-                                <div class="flex items-center">
-                                    <div class="mr-4">
-                                        <i class="fas fa-wallet text-3xl text-green-600"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold">Wallets</h4>
-                                        <p class="text-sm text-gray-600">Paytm, Mobikwik, Freecharge</p>
-                                    </div>
-                                </div>
+                            <div class="flex justify-between">
+                                <span>Selected Payment:</span>
+                                <span class="font-bold" id="summary_payment">None</span>
                             </div>
+                        </div>
+                        
+                        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+                            <p class="text-yellow-700">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Using wallet? Amount will be deducted immediately after confirmation.
+                            </p>
                         </div>
                         
                         <div class="mt-8 bg-gray-50 p-4 rounded-lg">
@@ -315,13 +362,9 @@ $points_value = $max_points; // 1 point = ₹1
                                 </div>
                             </div>
                             <p class="mt-3 text-sm text-gray-600">
-                                Your payment details are securely encrypted and processed by Razorpay. 
+                                Your payment details are securely encrypted and processed. 
                                 We do not store your card information.
                             </p>
-                        </div>
-                        
-                        <div class="mt-6 text-center">
-                            <img src="https://razorpay.com/assets/payments.png" alt="Payment Methods" class="mx-auto">
                         </div>
                     </div>
                 </div>
@@ -349,6 +392,8 @@ function updatePointsValue(points) {
     const pointsDisplay = document.getElementById('points_display');
     const discountDisplay = document.getElementById('discount_display');
     const finalAmountDisplay = document.getElementById('final_amount');
+    const summaryDiscount = document.getElementById('summary_discount');
+    const summaryFinal = document.getElementById('summary_final');
     
     // Convert points to discount (1 point = ₹1)
     const discount = Math.min(points, <?= $total_amount ?>);
@@ -358,7 +403,28 @@ function updatePointsValue(points) {
     pointsDisplay.textContent = points;
     discountDisplay.textContent = '₹' + discount.toFixed(2);
     finalAmountDisplay.textContent = '₹' + finalAmount.toFixed(2);
+    summaryDiscount.textContent = '₹' + discount.toFixed(2);
+    summaryFinal.textContent = '₹' + finalAmount.toFixed(2);
 }
+
+function updatePaymentMethod(method) {
+    const summaryPayment = document.getElementById('summary_payment');
+    
+    if (method === 'wallet') {
+        summaryPayment.textContent = 'Wallet';
+        summaryPayment.className = 'font-bold text-green-600';
+    } else if (method === 'razorpay') {
+        summaryPayment.textContent = 'Razorpay';
+        summaryPayment.className = 'font-bold text-blue-600';
+    }
+}
+
+// Initialize payment method summary
+document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+    if (radio.checked) {
+        updatePaymentMethod(radio.value);
+    }
+});
 </script>
 
 <?php require_once '../includes/footer.php'; ?>
