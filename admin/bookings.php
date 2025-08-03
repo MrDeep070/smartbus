@@ -90,45 +90,36 @@ $bookings = $stmt->fetchAll();
         <div class="bg-white rounded-xl shadow-md overflow-hidden">
             <table class="min-w-full">
                 <thead class="bg-gray-200">
-                    <tr>
-                        <th class="py-3 px-4 text-left">Booking ID</th>
-                        <th class="py-3 px-4 text-left">User</th>
-                        <th class="py-3 px-4 text-left">Bus</th>
-                        <th class="py-3 px-4 text-left">Route</th>
-                        <th class="py-3 px-4 text-left">Date</th>
-                        <th class="py-3 px-4 text-left">Seats</th>
-                        <th class="py-3 px-4 text-left">Amount</th>
-                        <th class="py-3 px-4 text-left">Status</th>
-                        <th class="py-3 px-4 text-left">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($bookings as $booking): 
-                        $seats = json_decode($booking['seats'], true);
-                        $departure = date('d M Y, h:i A', strtotime($booking['departure_time']));
-                    ?>
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="py-3 px-4">BK<?= str_pad($booking['id'], 5, '0', STR_PAD_LEFT) ?></td>
-                        <td class="py-3 px-4">
-                            <div class="font-medium"><?= htmlspecialchars($booking['user_name']) ?></div>
-                            <div class="text-sm text-gray-600"><?= htmlspecialchars($booking['email']) ?></div>
-                        </td>
-                        <td class="py-3 px-4 font-medium"><?= htmlspecialchars($booking['bus_no']) ?></td>
-                        <td class="py-3 px-4">
-                            <div><?= htmlspecialchars($booking['source']) ?> to <?= htmlspecialchars($booking['destination']) ?></div>
-                            <div class="text-sm"><?= $departure ?></div>
-                        </td>
-                        <td class="py-3 px-4"><?= date('d M Y', strtotime($booking['booking_date'])) ?></td>
-                        <td class="py-3 px-4"><?= implode(', ', $seats) ?></td>
-                        <td class="py-3 px-4">₹<?= number_format($booking['amount_paid'], 2) ?></td>
-                        <td class="py-3 px-4">
-                            <span class="px-2 py-1 rounded-full text-xs 
-                                <?= $booking['status'] === 'confirmed' ? 'bg-green-100 text-green-800' : '' ?>
-                                <?= $booking['status'] === 'cancelled' ? 'bg-red-100 text-red-800' : '' ?>
-                                <?= $booking['status'] === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' ?>">
-                                <?= ucfirst($booking['status']) ?>
-                            </span>
-                        </td>
+    <tr>
+        <th class="py-3 px-4 text-left">Booking ID</th>
+        <th class="py-3 px-4 text-left">User</th>
+        <th class="py-3 px-4 text-left">Bus</th>
+        <th class="py-3 px-4 text-left">Route</th>
+        <th class="py-3 px-4 text-left">Date</th>
+        <th class="py-3 px-4 text-left">Seats</th>
+        <th class="py-3 px-4 text-left">Amount</th>
+        <th class="py-3 px-4 text-left">Cancellation Fee</th>
+        <th class="py-3 px-4 text-left">Status</th>
+        <th class="py-3 px-4 text-left">Actions</th>
+    </tr>
+</thead>
+<tbody>
+    <?php foreach ($bookings as $booking): 
+        $seats = json_decode($booking['seats'], true);
+        $departure = date('d M Y, h:i A', strtotime($booking['departure_time']));
+    ?>
+    <tr class="border-b hover:bg-gray-50">
+        <!-- ... other columns ... -->
+        <td class="py-3 px-4">₹<?= number_format($booking['amount_paid'], 2) ?></td>
+        <td class="py-3 px-4">₹<?= number_format($booking['cancellation_fee'], 2) ?></td>
+        <td class="py-3 px-4">
+            <span class="px-2 py-1 rounded-full text-xs 
+                <?= $booking['status'] === 'confirmed' ? 'bg-green-100 text-green-800' : '' ?>
+                <?= $booking['status'] === 'cancelled' ? 'bg-red-100 text-red-800' : '' ?>
+                <?= $booking['status'] === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' ?>">
+                <?= ucfirst($booking['status']) ?>
+            </span>
+        </td>
                         <td class="py-3 px-4">
                             <a href="#" class="text-blue-600 hover:text-blue-800 mr-2">
                                 <i class="fas fa-eye"></i>

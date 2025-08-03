@@ -1,1 +1,1 @@
-http://localhost/gsrtc-bookings/admin/login.php
+http://localhost/gsrtc/admin/login.php

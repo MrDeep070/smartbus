@@ -1,0 +1,54 @@
+# Composer dependencies
+/vendor/
+/composer.lock
+
+# Node dependencies (if any)
+node_modules/
+
+# IDEs and editors
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+*.idea/
+*.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# PHPStorm
+.idea/
+
+# Logs
+*.log
+logs/
+error_log
+
+# Cache
+cache/
+tmp/
+*.cache
+
+# Upload folders (optional: exclude if dynamic)
+uploads/
+files/
+
+# Environment config
+.env
+.env.*
+
+# PHPUnit
+.phpunit.result.cache
+
+# Xdebug trace files
+*.xt
+*.xdebug
+
+# Backup files
+*.bak
+*.old
+
+# Ignore test coverage results
+coverage/
