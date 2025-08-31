@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100">
-    <?php include_once '../includes/header.php'; ?>
+    <?php include_once './header.php'; ?>
     
     <main class="container mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">
@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-arrow-left mr-1"></i> Back to Buses
                 </a>
             </div>
+            
             
             <?php if ($error): ?>
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">

@@ -4,10 +4,10 @@ require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/header.php';
 
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+// if (!isLoggedIn()) {
+//     header('Location: login.php');
+//     exit;
+// }
 
 // Get bus details
 if (empty($_GET['bus_id'])) {

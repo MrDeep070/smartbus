@@ -7,6 +7,9 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit();
 }
 ?>
+<head>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
 <header class="bg-gray-800 text-white shadow-md">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <div class="text-xl font-bold flex items-center gap-2">
