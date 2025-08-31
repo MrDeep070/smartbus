@@ -1,6 +1,7 @@
 <?php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+// require_once '../includes/header.php';
 
 if (!isLoggedIn()) {
     header('Location: login.php');
@@ -124,13 +125,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
             
-            header("Location: confirm.php?id=" . $booking_id);
+            // Redirect to confirmation page
+            header('Location: confirm.php?id=' . $booking_id);
             exit;
 
-            if(!$booking_id) {
-                header('Location: confirm.php?id=' . $booking_id);
-            }
-            
             
         } catch (Exception $e) {
             $pdo->rollBack();
