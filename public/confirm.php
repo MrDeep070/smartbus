@@ -3,10 +3,10 @@ require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/header.php';
 
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+// if (!isLoggedIn()) {
+//     header('Location: login.php');
+//     exit;
+// }
 
 // Get booking ID
 if (empty($_GET['id'])) {

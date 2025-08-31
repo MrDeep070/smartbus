@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100">
-    <?php include_once '../includes/header.php'; ?>
+    <?php include_once './header.php'; ?>
     
     <main class="container mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">

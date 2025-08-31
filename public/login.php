@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once '../includes/header.php';
 ?>
 
-<div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg">
+<div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg mt-20">
     <h2 class="text-3xl font-bold text-center mb-6 text-blue-700">Login to Your Account</h2>
     
     <?php if (isset($_GET['registered'])): ?>
@@ -70,4 +70,4 @@ require_once '../includes/header.php';
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<!-- <?php require_once '../includes/footer.php'; ?> -->
